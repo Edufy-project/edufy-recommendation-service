@@ -1,6 +1,5 @@
 package com.example.edufy_recommendation_service.controllers;
 
-import com.example.edufy_recommendation_service.entities.UserDTO;
 import com.example.edufy_recommendation_service.services.RecommendService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
