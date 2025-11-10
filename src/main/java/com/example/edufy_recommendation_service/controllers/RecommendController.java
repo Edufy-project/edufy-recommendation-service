@@ -1,5 +1,6 @@
 package com.example.edufy_recommendation_service.controllers;
 
+import com.example.edufy_recommendation_service.entities.RecommendationDTO;
 import com.example.edufy_recommendation_service.services.RecommendService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,13 +20,13 @@ public class RecommendController {
     }
 
     @GetMapping("recommended/media/{userId}")
-    public List<?> getRecommendedMediaByUserId(@PathVariable Long userId) {
+    public List<RecommendationDTO> getRecommendedMediaByUserId(@PathVariable Long userId) {
         return recommendService.getRecommendedMediaListByUserId(userId);
     }
 
-    @GetMapping("recommended/genre/{userId}")
-    public List<String> getRecommendedGenreByUserId(@PathVariable Long userId) {
-        return recommendService.getRecommendedGenreListByUserId(userId);
+    @GetMapping("getgenre/{mediaType}/{mediaId}")
+    public String getGenre(@PathVariable String mediaType, @PathVariable Long mediaId) {
+        return recommendService.getMediaGenre(mediaType, mediaId);
     }
 
 }
