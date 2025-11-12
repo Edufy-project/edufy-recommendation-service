@@ -2,31 +2,31 @@ package com.example.edufy_recommendation_service.entities;
 
 public class RecommendationDTO {
 
-    private Long mediaId;
-    private String mediaType;
+    private Long id;
+    private String genre;
     private String title;
 
     public RecommendationDTO() {}
-    public RecommendationDTO(Long mediaId, String mediaType, String title) {
-        this.mediaId = mediaId;
-        this.mediaType = mediaType;
+    public RecommendationDTO(Long id, String genre, String title) {
+        this.id = id;
+        this.genre = genre;
         this.title = title;
     }
 
-    public Long getMediaId() {
-        return mediaId;
+    public Long getId() {
+        return id;
     }
 
-    public void setMediaId(Long mediaId) {
-        this.mediaId = mediaId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public String getMediaType() {
-        return mediaType;
+    public String getGenre() {
+        return genre;
     }
 
-    public void setMediaType(String mediaType) {
-        this.mediaType = mediaType;
+    public void setGenre(String genre) {
+        this.genre = genre;
     }
 
     public String getTitle() {

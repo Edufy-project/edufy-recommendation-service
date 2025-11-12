@@ -17,8 +17,9 @@ public class RecommendService {
     private RestClient mediaServiceClient;
 
     public RecommendService(RestClient.Builder restClientBuilder,
-                            @Value("http://localhost:8080") String userServiceUrl,
-                            @Value("http://localhost:9091") String mediaServiceUrl) {
+                            @Value("http://localhost:9093") String userServiceUrl,
+                            @Value("http://localhost:9091") String mediaServiceUrl)
+    {
         this.userServiceClient = restClientBuilder
                 .baseUrl(userServiceUrl)
                 .build();
