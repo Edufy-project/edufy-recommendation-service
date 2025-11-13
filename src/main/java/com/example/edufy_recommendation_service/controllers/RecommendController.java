@@ -19,9 +19,9 @@ public class RecommendController {
         this.recommendService = recommendService;
     }
 
-    @GetMapping("recommended/media/{userId}")
-    public List<RecommendationDTO> getRecommendedMediaByUserId(@PathVariable Long userId) {
-        return recommendService.getRecommendedMediaListByUserId(userId);
+    @GetMapping("recommended/{mediaType}/{userId}")
+    public List<RecommendationDTO> getRecommendedMediaByUserId(@PathVariable String mediaType, @PathVariable Long userId) {
+        return recommendService.getRecommendedMediaListByUserId(mediaType, userId);
     }
 
     @GetMapping("getgenre/{mediaType}/{mediaId}")

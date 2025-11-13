@@ -43,30 +43,88 @@ public class RecommendService {
         }
     }
 
-    public List<RecommendationDTO> getRecommendedMediaListByUserId(Long userId) {
+    public List<RecommendationDTO> getRecommendedMediaListByUserId(String mediaType, Long userId) {
 
         List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId);
         List<String> preferredGenres = getMediaGenresFromHistory(userHistory);
         List<RecommendationDTO> recommendationsList = new ArrayList<>();
 
-        recommendationsList.addAll(getMediaByPreferredGenres(preferredGenres, 10));
+        recommendationsList.addAll(getMediaByPreferredGenres(mediaType, userId, preferredGenres, 10));
         Collections.shuffle(recommendationsList);
 
         return recommendationsList;
     }
 
-    public List<RecommendationDTO> getMediaByPreferredGenres(List<String> preferredGenres, int amount) {
+    public List<RecommendationDTO> getMediaByPreferredGenres(String mediaType, Long userId, List<String> preferredGenres, int amount) {
         try {
             String mostPlayedGenre = preferredGenres.getFirst();
+            List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId);
 
             List<RecommendationDTO> recommendedMedia = mediaServiceClient.get()
-                    .uri("/api/edufy/mediaplayer/getmedia/genre/" + mostPlayedGenre.toLowerCase())
+                    .uri("/api/edufy/mediaplayer/getmedia/" + mediaType + "/" + mostPlayedGenre.toLowerCase())
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<RecommendationDTO>>() {});
 
-            return recommendedMedia.stream()
-                    .limit(amount)
-                    .collect(Collectors.toList());
+            if (recommendedMedia != null) {
+                List<RecommendationDTO> filteredMediaList = new ArrayList<>();
+
+                for (RecommendationDTO recommended : recommendedMedia) {
+                    boolean played = false;
+
+                    for (MediaReferenceDTO media : userHistory) {
+                        if (media.getMediaId().equals(recommended.getId())) {
+                            played = true;
+                            break;
+                        }
+                    }
+
+                    if (!played) {
+                        filteredMediaList.add(recommended);
+                    }
+                }
+
+                if (filteredMediaList.size() < amount) {
+                    List<RecommendationDTO> allMedia = mediaServiceClient.get()
+                            .uri("/api/edufy/mediaplayer/getmedia/all/" + mediaType)
+                            .retrieve()
+                            .body(new ParameterizedTypeReference<List<RecommendationDTO>>() {});
+
+                    if (allMedia != null) {
+                        for (RecommendationDTO media : allMedia) {
+                            boolean added = false;
+                            for (RecommendationDTO filteredMedia : filteredMediaList) {
+                                if (filteredMedia.getId().equals(media.getId())) {
+                                    added = true;
+                                    break;
+                                }
+                            }
+
+                            boolean played = false;
+                            for (MediaReferenceDTO userMedia : userHistory) {
+                                if (userMedia.getMediaId().equals(media.getId())) {
+                                    played = true;
+                                    break;
+                                }
+                            }
+
+                            if (!added && !played) {
+                                filteredMediaList.add(media);
+
+                                if (filteredMediaList.size() == amount) {
+                                    break;
+                                }
+                            }
+
+                        }
+                    }
+                }
+
+                Collections.shuffle(filteredMediaList);
+                return filteredMediaList.stream().limit(amount).collect(Collectors.toList());
+
+            } else {
+                return null;
+            }
 
         } catch (Exception e) {
             throw new RuntimeException(e);
