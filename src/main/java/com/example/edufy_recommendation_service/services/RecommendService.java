@@ -57,11 +57,16 @@ public class RecommendService {
 
     public List<RecommendationDTO> getMediaByPreferredGenres(String mediaType, Long userId, List<String> preferredGenres, int amount) {
         try {
+            int preferredAmount = (int) (amount * 0.8);
+
             List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId);
             List<RecommendationDTO> recommendedMediaList = new ArrayList<>();
 
-            for (String genre : preferredGenres) {
-                if (recommendedMediaList.size() > amount) {
+            List<String> shuffledGenreList = new ArrayList<>(preferredGenres);
+            Collections.shuffle(shuffledGenreList);
+
+            for (String genre : shuffledGenreList) {
+                if (recommendedMediaList.size() > preferredAmount) {
                     break;
                 }
 
@@ -72,7 +77,7 @@ public class RecommendService {
 
                 if (recommendedMedia != null) {
                     for (RecommendationDTO media : recommendedMedia) {
-                        if (recommendedMediaList.size() > amount) {
+                        if (recommendedMediaList.size() > preferredAmount) {
                             break;
                         }
                         if (!isMediaPlayed(media.getId(), userHistory) && !isMediaAdded(media.getId(), recommendedMediaList)) {
@@ -83,24 +88,21 @@ public class RecommendService {
 
             }
 
-            if (recommendedMediaList.size() < amount) {
-                List<RecommendationDTO> allMedia = mediaServiceClient.get()
-                        .uri("/edufy/api/mediaplayer/getmedia/all/" + mediaType)
-                        .retrieve()
-                        .body(new ParameterizedTypeReference<List<RecommendationDTO>>() {});
+            List<RecommendationDTO> allMedia = mediaServiceClient.get()
+                    .uri("/edufy/api/mediaplayer/getmedia/all/" + mediaType)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<RecommendationDTO>>() {});
 
-                if (allMedia != null) {
-                    for (RecommendationDTO media : allMedia) {
-                        if (recommendedMediaList.size() > amount) {
-                            break;
-                        }
+            if (allMedia != null) {
+                for (RecommendationDTO media : allMedia) {
+                    if (recommendedMediaList.size() > amount) {
+                        break;
+                    }
 
-                        if (!isMediaPlayed(media.getId(), userHistory) && !isMediaAdded(media.getId(), recommendedMediaList)) {
-                            recommendedMediaList.add(media);
-                        }
+                    if (!isMediaPlayed(media.getId(), userHistory) && !isMediaAdded(media.getId(), recommendedMediaList)) {
+                        recommendedMediaList.add(media);
                     }
                 }
-
             }
 
             Collections.shuffle(recommendedMediaList);
