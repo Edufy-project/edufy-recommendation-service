@@ -57,74 +57,54 @@ public class RecommendService {
 
     public List<RecommendationDTO> getMediaByPreferredGenres(String mediaType, Long userId, List<String> preferredGenres, int amount) {
         try {
-            String mostPlayedGenre = preferredGenres.getFirst();
             List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId);
+            List<RecommendationDTO> recommendedMediaList = new ArrayList<>();
 
-            List<RecommendationDTO> recommendedMedia = mediaServiceClient.get()
-                    .uri("/api/edufy/mediaplayer/getmedia/" + mediaType + "/" + mostPlayedGenre.toLowerCase())
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<List<RecommendationDTO>>() {});
+            for (String genre : preferredGenres) {
+                if (recommendedMediaList.size() > amount) {
+                    break;
+                }
 
-            if (recommendedMedia != null) {
-                List<RecommendationDTO> filteredMediaList = new ArrayList<>();
+                List<RecommendationDTO> recommendedMedia = mediaServiceClient.get()
+                        .uri("/edufy/api/mediaplayer/getmedia/" + mediaType + "/" + genre.toLowerCase())
+                        .retrieve()
+                        .body(new ParameterizedTypeReference<List<RecommendationDTO>>() {});
 
-                for (RecommendationDTO recommended : recommendedMedia) {
-                    boolean played = false;
-
-                    for (MediaReferenceDTO media : userHistory) {
-                        if (media.getMediaId().equals(recommended.getId())) {
-                            played = true;
+                if (recommendedMedia != null) {
+                    for (RecommendationDTO media : recommendedMedia) {
+                        if (recommendedMediaList.size() > amount) {
                             break;
                         }
-                    }
-
-                    if (!played) {
-                        filteredMediaList.add(recommended);
-                    }
-                }
-
-                if (filteredMediaList.size() < amount) {
-                    List<RecommendationDTO> allMedia = mediaServiceClient.get()
-                            .uri("/api/edufy/mediaplayer/getmedia/all/" + mediaType)
-                            .retrieve()
-                            .body(new ParameterizedTypeReference<List<RecommendationDTO>>() {});
-
-                    if (allMedia != null) {
-                        for (RecommendationDTO media : allMedia) {
-                            boolean added = false;
-                            for (RecommendationDTO filteredMedia : filteredMediaList) {
-                                if (filteredMedia.getId().equals(media.getId())) {
-                                    added = true;
-                                    break;
-                                }
-                            }
-
-                            boolean played = false;
-                            for (MediaReferenceDTO userMedia : userHistory) {
-                                if (userMedia.getMediaId().equals(media.getId())) {
-                                    played = true;
-                                    break;
-                                }
-                            }
-
-                            if (!added && !played) {
-                                filteredMediaList.add(media);
-
-                                if (filteredMediaList.size() == amount) {
-                                    break;
-                                }
-                            }
-
+                        if (!isMediaPlayed(media.getId(), userHistory) && !isMediaAdded(media.getId(), recommendedMediaList)) {
+                            recommendedMediaList.add(media);
                         }
                     }
                 }
 
-                Collections.shuffle(filteredMediaList);
-                return filteredMediaList.stream().limit(amount).collect(Collectors.toList());
-
-            } else {
-                return null;
             }
+
+            if (recommendedMediaList.size() < amount) {
+                List<RecommendationDTO> allMedia = mediaServiceClient.get()
+                        .uri("/edufy/api/mediaplayer/getmedia/all/" + mediaType)
+                        .retrieve()
+                        .body(new ParameterizedTypeReference<List<RecommendationDTO>>() {});
+
+                if (allMedia != null) {
+                    for (RecommendationDTO media : allMedia) {
+                        if (recommendedMediaList.size() > amount) {
+                            break;
+                        }
+
+                        if (!isMediaPlayed(media.getId(), userHistory) && !isMediaAdded(media.getId(), recommendedMediaList)) {
+                            recommendedMediaList.add(media);
+                        }
+                    }
+                }
+
+            }
+
+            Collections.shuffle(recommendedMediaList);
+            return recommendedMediaList.stream().limit(amount).toList();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -144,21 +124,39 @@ public class RecommendService {
         }
 
         return frequencyMap.entrySet().stream()
-                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .map(e -> e.getKey())
+                .toList();
     }
 
     public String getMediaGenre(String mediaType, Long mediaId) {
         try {
             return mediaServiceClient.get()
-                    .uri("/api/edufy/mediaplayer/getgenre/" + mediaType + "/" + mediaId)
+                    .uri("/edufy/api/mediaplayer/getgenre/" + mediaType + "/" + mediaId)
                     .retrieve()
                     .body(String.class);
 
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private boolean isMediaPlayed(Long mediaId, List<MediaReferenceDTO> userHistory) {
+        for (MediaReferenceDTO media : userHistory) {
+            if (media.getMediaId().equals(mediaId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isMediaAdded(Long mediaId, List<RecommendationDTO> recommendedList) {
+        for (RecommendationDTO media : recommendedList) {
+            if (media.getId().equals(mediaId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }
