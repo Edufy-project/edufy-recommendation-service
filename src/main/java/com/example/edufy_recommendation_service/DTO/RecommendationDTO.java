@@ -1,4 +1,4 @@
-package com.example.edufy_recommendation_service.entities;
+package com.example.edufy_recommendation_service.DTO;
 
 public class RecommendationDTO {
 

@@ -1,14 +1,14 @@
 package com.example.edufy_recommendation_service.services;
 
-import com.example.edufy_recommendation_service.entities.MediaReferenceDTO;
-import com.example.edufy_recommendation_service.entities.RecommendationDTO;
+import com.example.edufy_recommendation_service.DTO.MediaReferenceDTO;
+import com.example.edufy_recommendation_service.DTO.RecommendationDTO;
+import com.example.edufy_recommendation_service.DTO.UserFeedbackDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class RecommendService {
@@ -44,9 +44,8 @@ public class RecommendService {
     }
 
     public List<RecommendationDTO> getRecommendedMediaListByUserId(String mediaType, Long userId) {
-
         List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId);
-        List<String> preferredGenres = getMediaGenresFromHistory(userHistory);
+        List<String> preferredGenres = getMediaGenresFromHistory(userHistory, getUserLikesById(userId), getUserDislikesById(userId));
         List<RecommendationDTO> recommendationsList = new ArrayList<>();
 
         recommendationsList.addAll(getMediaByPreferredGenres(mediaType, userId, preferredGenres, 10));
@@ -57,10 +56,16 @@ public class RecommendService {
 
     public List<RecommendationDTO> getMediaByPreferredGenres(String mediaType, Long userId, List<String> preferredGenres, int amount) {
         try {
-            int preferredAmount = (int) (amount * 0.8);
+            int preferredAmount = (int) Math.ceil(amount * 0.8);
 
             List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId);
             List<RecommendationDTO> recommendedMediaList = new ArrayList<>();
+            List<UserFeedbackDTO> userDislikesList = getUserDislikesById(userId);
+            List<Long> dislikedMediaIdsList = new ArrayList<>();
+
+            for (int i = 0; i < userDislikesList.size(); i++) {
+                dislikedMediaIdsList.add(userDislikesList.get(i).getMediaId());
+            }
 
             List<String> shuffledGenreList = new ArrayList<>(preferredGenres);
             Collections.shuffle(shuffledGenreList);
@@ -80,7 +85,7 @@ public class RecommendService {
                         if (recommendedMediaList.size() > preferredAmount) {
                             break;
                         }
-                        if (!isMediaPlayed(media.getId(), userHistory) && !isMediaAdded(media.getId(), recommendedMediaList)) {
+                        if (!excludeMedia(media.getId(), userHistory, dislikedMediaIdsList) && !isMediaAdded(media.getId(), recommendedMediaList)) {
                             recommendedMediaList.add(media);
                         }
                     }
@@ -99,7 +104,7 @@ public class RecommendService {
                         break;
                     }
 
-                    if (!isMediaPlayed(media.getId(), userHistory) && !isMediaAdded(media.getId(), recommendedMediaList)) {
+                    if (!excludeMedia(media.getId(), userHistory, dislikedMediaIdsList) && !isMediaAdded(media.getId(), recommendedMediaList)) {
                         recommendedMediaList.add(media);
                     }
                 }
@@ -113,16 +118,26 @@ public class RecommendService {
         }
     }
 
-    public List<String> getMediaGenresFromHistory(List<MediaReferenceDTO> userHistory) {
+    public List<String> getMediaGenresFromHistory(
+            List<MediaReferenceDTO> userHistory,
+            List<UserFeedbackDTO> userLikes,
+            List<UserFeedbackDTO> userDislikes
+    ) {
         Map<String, Integer> frequencyMap = new HashMap<>();
-        List<String> genreList = new ArrayList<>();
 
         for (MediaReferenceDTO media : userHistory) {
-            genreList.add(getMediaGenre(media.getMediaType(), media.getMediaId()));
-        }
+            String genre = getMediaGenre(media.getMediaType(), media.getMediaId());
+            int recommendWeight = 1;
 
-        for (String genre : genreList) {
-            frequencyMap.put(genre, frequencyMap.getOrDefault(genre, 0) + 1);
+            if (isMediaLiked(media.getMediaId(), media.getMediaType(), userLikes)) {
+                recommendWeight = 3;
+            } else if (isMediaDisliked(media.getMediaId(), media.getMediaType(), userDislikes)) {
+                recommendWeight = -3;
+            }
+
+            if (recommendWeight > 0 && genre != null) {
+                frequencyMap.put(genre, frequencyMap.getOrDefault(genre, 0) + recommendWeight);
+            }
         }
 
         return frequencyMap.entrySet().stream()
@@ -143,6 +158,30 @@ public class RecommendService {
         }
     }
 
+    public List<UserFeedbackDTO> getUserLikesById(Long userId) {
+        try {
+            return  userServiceClient.get()
+                    .uri("/edufy/api/user/" + userId + "/feedback/likes")
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<UserFeedbackDTO>>() {});
+
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
+    public List<UserFeedbackDTO> getUserDislikesById(Long userId) {
+        try {
+            return  userServiceClient.get()
+                    .uri("/edufy/api/user/" + userId + "/feedback/dislikes")
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<UserFeedbackDTO>>() {});
+
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
     private boolean isMediaPlayed(Long mediaId, List<MediaReferenceDTO> userHistory) {
         for (MediaReferenceDTO media : userHistory) {
             if (media.getMediaId().equals(mediaId)) {
@@ -159,6 +198,28 @@ public class RecommendService {
             }
         }
         return false;
+    }
+
+    private boolean isMediaLiked(Long mediaId, String mediaType, List<UserFeedbackDTO> userLikes) {
+        for (UserFeedbackDTO likedMedia : userLikes) {
+            if (likedMedia.getMediaId().equals(mediaId) && likedMedia.getMediaType().equals(mediaType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isMediaDisliked(Long mediaId, String mediaType, List<UserFeedbackDTO> userDislikes) {
+        for (UserFeedbackDTO dislike : userDislikes) {
+            if (dislike.getMediaId().equals(mediaId) && dislike.getMediaType().equals(mediaType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean excludeMedia(Long mediaId, List<MediaReferenceDTO> userHistory, List<Long> dislikedMediaIds) {
+        return isMediaPlayed(mediaId, userHistory) || dislikedMediaIds.contains(mediaId);
     }
 
 }
