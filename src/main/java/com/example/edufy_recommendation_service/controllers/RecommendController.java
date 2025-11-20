@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class RecommendController {
@@ -28,5 +29,13 @@ public class RecommendController {
     public String getGenre(@PathVariable String mediaType, @PathVariable Long mediaId) {
         return recommendService.getMediaGenre(mediaType, mediaId);
     }
+
+
+    //todo REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD
+    @GetMapping("recommended/{userId}/stats")
+    public Map<String, Integer> getRecommendedMediaStats(@PathVariable Long userId) {
+        return recommendService.getRecommendedMediaStatsREMOVE(userId);
+    }
+    //todo REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD
 
 }

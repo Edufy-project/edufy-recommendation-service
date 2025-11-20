@@ -222,4 +222,37 @@ public class RecommendService {
         return isMediaPlayed(mediaId, userHistory) || dislikedMediaIds.contains(mediaId);
     }
 
+
+    //todo REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD
+    public Map<String, Integer> getMediaGenresFromHistoryREMOVE(
+            List<MediaReferenceDTO> userHistory,
+            List<UserFeedbackDTO> userLikes,
+            List<UserFeedbackDTO> userDislikes
+    ) {
+        Map<String, Integer> frequencyMap = new HashMap<>();
+
+        for (MediaReferenceDTO media : userHistory) {
+            String genre = getMediaGenre(media.getMediaType(), media.getMediaId());
+            int recommendWeight = 1;
+
+            if (isMediaLiked(media.getMediaId(), media.getMediaType(), userLikes)) {
+                recommendWeight = 3;
+            } else if (isMediaDisliked(media.getMediaId(), media.getMediaType(), userDislikes)) {
+                recommendWeight = -3;
+            }
+
+            if (recommendWeight > 0 && genre != null) {
+                frequencyMap.put(genre, frequencyMap.getOrDefault(genre, 0) + recommendWeight);
+            }
+        }
+
+        return frequencyMap;
+    }
+
+    public Map<String, Integer> getRecommendedMediaStatsREMOVE(Long userId) {
+        List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId);
+        return getMediaGenresFromHistoryREMOVE(userHistory, getUserLikesById(userId), getUserDislikesById(userId));
+    }
+    //todo REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD
+
 }
