@@ -3,13 +3,13 @@ package com.example.edufy_recommendation_service.DTO;
 public class RecommendationDTO {
 
     private Long id;
-    private String genre;
+    private String genreName;
     private String title;
 
     public RecommendationDTO() {}
-    public RecommendationDTO(Long id, String genre, String title) {
+    public RecommendationDTO(Long id, String genreName, String title) {
         this.id = id;
-        this.genre = genre;
+        this.genreName = genreName;
         this.title = title;
     }
 
@@ -21,12 +21,12 @@ public class RecommendationDTO {
         this.id = id;
     }
 
-    public String getGenre() {
-        return genre;
+    public String getGenreName() {
+        return genreName;
     }
 
-    public void setGenre(String genre) {
-        this.genre = genre;
+    public void setGenreName(String genreName) {
+        this.genreName = genreName;
     }
 
     public String getTitle() {
