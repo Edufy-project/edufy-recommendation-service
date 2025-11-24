@@ -5,8 +5,10 @@ import com.example.edufy_recommendation_service.DTO.RecommendationDTO;
 import com.example.edufy_recommendation_service.DTO.UserFeedbackDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
@@ -47,6 +49,11 @@ public class RecommendService {
         List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId);
         List<String> preferredGenres = getMediaGenresFromHistory(userHistory, getUserLikesById(userId), getUserDislikesById(userId));
         List<RecommendationDTO> recommendationsList = new ArrayList<>();
+        List<String> validMediaTypes = getValidMediaTypes();
+
+        if (!validMediaTypes.contains(mediaType.toLowerCase())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid media type [" + mediaType + "]. Valid media types are: " + validMediaTypes);
+        }
 
         recommendationsList.addAll(getMediaByPreferredGenres(mediaType, userId, preferredGenres, 10));
         Collections.shuffle(recommendationsList);
@@ -125,6 +132,10 @@ public class RecommendService {
     ) {
         Map<String, Integer> frequencyMap = new HashMap<>();
 
+        if (userHistory == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found.");
+        }
+
         for (MediaReferenceDTO media : userHistory) {
             String genre = getMediaGenre(media.getMediaType(), media.getMediaId());
             int recommendWeight = 1;
@@ -152,6 +163,18 @@ public class RecommendService {
                     .uri("/edufy/api/mediaplayer/getgenre/" + mediaType + "/" + mediaId)
                     .retrieve()
                     .body(String.class);
+
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public List<String> getValidMediaTypes() {
+        try {
+            return mediaServiceClient.get()
+                    .uri("/edufy/api/mediaplayer/valid-mediatypes")
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<String>>() {});
 
         } catch (Exception e) {
             return null;

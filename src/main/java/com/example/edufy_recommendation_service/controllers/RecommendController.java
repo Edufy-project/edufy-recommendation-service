@@ -3,6 +3,7 @@ package com.example.edufy_recommendation_service.controllers;
 import com.example.edufy_recommendation_service.DTO.RecommendationDTO;
 import com.example.edufy_recommendation_service.services.RecommendService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,13 +22,14 @@ public class RecommendController {
     }
 
     @GetMapping("recommended/{mediaType}/{userId}")
-    public List<RecommendationDTO> getRecommendedMediaByUserId(@PathVariable String mediaType, @PathVariable Long userId) {
-        return recommendService.getRecommendedMediaListByUserId(mediaType, userId);
+    public ResponseEntity<List<RecommendationDTO>> getRecommendedMediaByUserId(@PathVariable String mediaType, @PathVariable Long userId) {
+        return ResponseEntity.ok(recommendService.getRecommendedMediaListByUserId(mediaType, userId));
     }
 
+    //Används den här ens någonstans?
     @GetMapping("getgenre/{mediaType}/{mediaId}")
-    public String getGenre(@PathVariable String mediaType, @PathVariable Long mediaId) {
-        return recommendService.getMediaGenre(mediaType, mediaId);
+    public ResponseEntity<String> getGenre(@PathVariable String mediaType, @PathVariable Long mediaId) {
+        return ResponseEntity.ok(recommendService.getMediaGenre(mediaType, mediaId));
     }
 
 
