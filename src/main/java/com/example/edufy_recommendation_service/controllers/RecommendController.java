@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 public class RecommendController {
@@ -25,19 +24,5 @@ public class RecommendController {
     public ResponseEntity<List<RecommendationDTO>> getRecommendedMediaByUserId(@PathVariable String mediaType, @PathVariable Long userId) {
         return ResponseEntity.ok(recommendService.getRecommendedMediaListByUserId(mediaType, userId));
     }
-
-    //Används den här ens någonstans?
-    @GetMapping("getgenre/{mediaType}/{mediaId}")
-    public ResponseEntity<String> getGenre(@PathVariable String mediaType, @PathVariable Long mediaId) {
-        return ResponseEntity.ok(recommendService.getMediaGenre(mediaType, mediaId));
-    }
-
-
-    //todo REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD
-    @GetMapping("recommended/{userId}/stats")
-    public Map<String, Integer> getRecommendedMediaStats(@PathVariable Long userId) {
-        return recommendService.getRecommendedMediaStatsREMOVE(userId);
-    }
-    //todo REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD REMOVE THIS METHOD
 
 }
