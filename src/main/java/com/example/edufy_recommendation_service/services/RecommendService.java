@@ -5,9 +5,12 @@ import com.example.edufy_recommendation_service.DTO.RecommendationDTO;
 import com.example.edufy_recommendation_service.DTO.UserFeedbackDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
@@ -34,7 +37,7 @@ public class RecommendService {
     public List<MediaReferenceDTO> getUserMediaHistory(Long userId) {
         try {
             List<MediaReferenceDTO> serviceResponse = userServiceClient.get()
-                    .uri("/api/edufy/usermediahistory/" + userId)
+                    .uri("/edufy/api/users/usermediahistory/" + userId)
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<MediaReferenceDTO>>() {});
 
@@ -51,8 +54,10 @@ public class RecommendService {
         List<RecommendationDTO> recommendationsList = new ArrayList<>();
         List<String> validMediaTypes = getValidMediaTypes();
 
-        if (!validMediaTypes.contains(mediaType.toLowerCase())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid media type [" + mediaType + "]. Valid media types are: " + validMediaTypes);
+        if (validMediaTypes != null) {
+            if (!validMediaTypes.contains(mediaType.toLowerCase())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid media type [" + mediaType + "]. Valid media types are: " + validMediaTypes);
+            }
         }
 
         recommendationsList.addAll(getMediaByPreferredGenres(mediaType, userId, preferredGenres, 10));
@@ -184,7 +189,7 @@ public class RecommendService {
     public List<UserFeedbackDTO> getUserLikesById(Long userId) {
         try {
             return  userServiceClient.get()
-                    .uri("/edufy/api/user/" + userId + "/feedback/likes")
+                    .uri("/edufy/api/users/user/" + userId + "/feedback/likes")
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<UserFeedbackDTO>>() {});
 
@@ -196,7 +201,7 @@ public class RecommendService {
     public List<UserFeedbackDTO> getUserDislikesById(Long userId) {
         try {
             return  userServiceClient.get()
-                    .uri("/edufy/api/user/" + userId + "/feedback/dislikes")
+                    .uri("/edufy/api/users/user/" + userId + "/feedback/dislikes")
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<UserFeedbackDTO>>() {});
 
