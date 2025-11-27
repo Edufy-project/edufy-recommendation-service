@@ -6,11 +6,8 @@ import com.example.edufy_recommendation_service.DTO.UserFeedbackDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
@@ -34,10 +31,11 @@ public class RecommendService {
                 .build();
     }
 
-    public List<MediaReferenceDTO> getUserMediaHistory(Long userId) {
+    public List<MediaReferenceDTO> getUserMediaHistory(Long userId, String token) {
         try {
             List<MediaReferenceDTO> serviceResponse = userServiceClient.get()
                     .uri("/edufy/api/users/usermediahistory/" + userId)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<MediaReferenceDTO>>() {});
 
@@ -48,11 +46,11 @@ public class RecommendService {
         }
     }
 
-    public List<RecommendationDTO> getRecommendedMediaListByUserId(String mediaType, Long userId) {
-        List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId);
-        List<String> preferredGenres = getMediaGenresFromHistory(userHistory, getUserLikesById(userId), getUserDislikesById(userId));
+    public List<RecommendationDTO> getRecommendedMediaListByUserId(String mediaType, Long userId, String token) {
+        List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId, token);
+        List<String> preferredGenres = getMediaGenresFromHistory(userHistory, getUserLikesById(userId, token), getUserDislikesById(userId, token), token);
         List<RecommendationDTO> recommendationsList = new ArrayList<>();
-        List<String> validMediaTypes = getValidMediaTypes();
+        List<String> validMediaTypes = getValidMediaTypes(token);
 
         if (validMediaTypes != null) {
             if (!validMediaTypes.contains(mediaType.toLowerCase())) {
@@ -60,19 +58,19 @@ public class RecommendService {
             }
         }
 
-        recommendationsList.addAll(getMediaByPreferredGenres(mediaType, userId, preferredGenres, 10));
+        recommendationsList.addAll(getMediaByPreferredGenres(mediaType, userId, preferredGenres, 10, token));
         Collections.shuffle(recommendationsList);
 
         return recommendationsList;
     }
 
-    public List<RecommendationDTO> getMediaByPreferredGenres(String mediaType, Long userId, List<String> preferredGenres, int amount) {
+    public List<RecommendationDTO> getMediaByPreferredGenres(String mediaType, Long userId, List<String> preferredGenres, int amount, String token) {
         try {
             int preferredAmount = (int) Math.ceil(amount * 0.8);
 
-            List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId);
+            List<MediaReferenceDTO> userHistory = getUserMediaHistory(userId, token);
             List<RecommendationDTO> recommendedMediaList = new ArrayList<>();
-            List<UserFeedbackDTO> userDislikesList = getUserDislikesById(userId);
+            List<UserFeedbackDTO> userDislikesList = getUserDislikesById(userId, token);
             List<Long> dislikedMediaIdsList = new ArrayList<>();
 
             for (int i = 0; i < userDislikesList.size(); i++) {
@@ -89,6 +87,7 @@ public class RecommendService {
 
                 List<RecommendationDTO> recommendedMedia = mediaServiceClient.get()
                         .uri("/edufy/api/mediaplayer/getmedia/" + mediaType + "/" + genre.toLowerCase())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .retrieve()
                         .body(new ParameterizedTypeReference<List<RecommendationDTO>>() {});
 
@@ -107,6 +106,7 @@ public class RecommendService {
 
             List<RecommendationDTO> allMedia = mediaServiceClient.get()
                     .uri("/edufy/api/mediaplayer/getmedia/all/" + mediaType)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<RecommendationDTO>>() {});
 
@@ -133,7 +133,8 @@ public class RecommendService {
     public List<String> getMediaGenresFromHistory(
             List<MediaReferenceDTO> userHistory,
             List<UserFeedbackDTO> userLikes,
-            List<UserFeedbackDTO> userDislikes
+            List<UserFeedbackDTO> userDislikes,
+            String token
     ) {
         Map<String, Integer> frequencyMap = new HashMap<>();
 
@@ -142,7 +143,7 @@ public class RecommendService {
         }
 
         for (MediaReferenceDTO media : userHistory) {
-            String genre = getMediaGenre(media.getMediaType(), media.getMediaId());
+            String genre = getMediaGenre(media.getMediaType(), media.getMediaId(), token);
             int recommendWeight = 1;
 
             if (isMediaLiked(media.getMediaId(), media.getMediaType(), userLikes)) {
@@ -162,10 +163,11 @@ public class RecommendService {
                 .toList();
     }
 
-    public String getMediaGenre(String mediaType, Long mediaId) {
+    public String getMediaGenre(String mediaType, Long mediaId, String token) {
         try {
             return mediaServiceClient.get()
                     .uri("/edufy/api/mediaplayer/getgenre/" + mediaType + "/" + mediaId)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .retrieve()
                     .body(String.class);
 
@@ -174,10 +176,11 @@ public class RecommendService {
         }
     }
 
-    public List<String> getValidMediaTypes() {
+    public List<String> getValidMediaTypes(String token) {
         try {
             return mediaServiceClient.get()
                     .uri("/edufy/api/mediaplayer/valid-mediatypes")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<String>>() {});
 
@@ -186,10 +189,11 @@ public class RecommendService {
         }
     }
 
-    public List<UserFeedbackDTO> getUserLikesById(Long userId) {
+    public List<UserFeedbackDTO> getUserLikesById(Long userId, String token) {
         try {
             return  userServiceClient.get()
                     .uri("/edufy/api/users/user/" + userId + "/feedback/likes")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<UserFeedbackDTO>>() {});
 
@@ -198,10 +202,11 @@ public class RecommendService {
         }
     }
 
-    public List<UserFeedbackDTO> getUserDislikesById(Long userId) {
+    public List<UserFeedbackDTO> getUserDislikesById(Long userId, String token) {
         try {
             return  userServiceClient.get()
                     .uri("/edufy/api/users/user/" + userId + "/feedback/dislikes")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<UserFeedbackDTO>>() {});
 
